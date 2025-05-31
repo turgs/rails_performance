@@ -6,22 +6,19 @@ class RailsPerformance::InstallGenerator < Rails::Generators::Base
     copy_file "initializer.rb", "config/initializers/rails_performance.rb"
   end
 
-  def copy_migrations
-    # Get the path to the gem's migrations
-    gem_migrations_path = File.expand_path("../../../../db/migrate", __dir__)
-    
-    Dir.glob(File.join(gem_migrations_path, "*.rb")).each do |migration_file|
-      filename = File.basename(migration_file)
-      # Generate timestamp
-      timestamp = Time.now.utc.strftime("%Y%m%d%H%M%S")
-      # Extract the migration name without number prefix
-      migration_name = filename.gsub(/^\d+_/, '')
-      timestamped_filename = "#{timestamp}_#{migration_name}"
-      
-      copy_file File.join("../../../../db/migrate", filename), "db/migrate/#{timestamped_filename}"
-      
-      # Increment timestamp to avoid conflicts
-      sleep(1)
-    end
+  def show_setup_instructions
+    say "\n" + "="*60
+    say "Rails Performance gem setup completed!"
+    say "="*60
+    say "\nThe gem will automatically:"
+    say "• Create its own SQLite database at storage/rails_performance.sqlite3"
+    say "• Run migrations automatically on Rails startup"
+    say "• Store all performance data in the separate database"
+    say "\nNo additional migration commands needed!"
+    say "\nThe performance dashboard will be available at:"
+    say "http://localhost:3000/rails/performance"
+    say "\nYou can customize the database path in the initializer:"
+    say "config/initializers/rails_performance.rb"
+    say "="*60
   end
 end

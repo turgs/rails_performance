@@ -65,6 +65,10 @@ Create `config/initializers/rails_performance.rb` in your app:
 
 ```ruby
 RailsPerformance.setup do |config|
+  # Database configuration - uses separate SQLite database
+  # Default: Rails.root.join("storage", "rails_performance.sqlite3")
+  # config.database_path = Rails.root.join("storage", "custom_performance.sqlite3")
+
   config.duration = 4.hours
 
   config.debug    = false # currently not used>
@@ -163,11 +167,12 @@ $ rails generate rails_performance:install
 
 Have a look at `config/initializers/rails_performance.rb` and adjust the configuration to your needs.
 
-Run the generated migrations to create the required database tables:
+The gem automatically:
+- Creates its own SQLite database at `storage/rails_performance.sqlite3` (or custom path if configured)
+- Runs all necessary migrations on Rails startup
+- Isolates performance data from your main application database
 
-```bash
-$ rails db:migrate
-```
+No additional migration commands are needed! The gem handles all database setup automatically.
 
 After installation and configuration, start your Rails application, make a few requests, and open `https://localhost:3000/rails/performance` URL.
 
@@ -262,7 +267,9 @@ In addition it's wrapping gems internal methods and collecting performance infor
 
 ## Database Storage
 
-The gem uses your application's SQLite database to store performance data. No external dependencies required.
+The gem uses its own separate SQLite database to store performance data, isolating it from your main application database. No external dependencies required.
+
+The database is automatically created at `storage/rails_performance.sqlite3` (or a custom path if configured) and all migrations are handled automatically on Rails startup.
 
 All information is stored in the database with automatic cleanup. The default retention time is set to `config.duration` from the configuration.
 
