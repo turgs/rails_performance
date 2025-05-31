@@ -24,6 +24,17 @@ module RailsPerformance
         }
       end
 
+      # Override save! to store the data as JSON
+      def save!(**args)
+        self.data = data.to_json if data.is_a?(Hash) && !data.is_a?(String)
+        super
+      end
+
+      def save(**args)
+        self.data = data.to_json if data.is_a?(Hash) && !data.is_a?(String)
+        super
+      end
+
       private
 
       def parsed_json_data

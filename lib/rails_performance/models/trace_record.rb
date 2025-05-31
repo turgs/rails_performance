@@ -6,8 +6,15 @@ module RailsPerformance
       validates :request_id, presence: true
       validates :request_id, uniqueness: true
 
-      def save!
+      def save!(**args)
         return false if data.blank?
+        self.data = data.to_json if data.is_a?(Array) || data.is_a?(Hash)
+        super
+      end
+
+      def save(**args) 
+        return false if data.blank?
+        self.data = data.to_json if data.is_a?(Array) || data.is_a?(Hash)
         super
       end
     end

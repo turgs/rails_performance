@@ -14,6 +14,10 @@ module RailsPerformance
       scope :by_path, ->(path) { where(path: path) if path.present? }
       scope :by_date, ->(date) { where("datetime LIKE ?", "#{date.strftime('%Y%m%d')}%") if date.present? }
 
+      def self.find_by(request_id:)
+        find_by_request_id(request_id)
+      end
+
       def self.find_by_request_id(request_id)
         find_by(request_id: request_id)
       end
@@ -51,7 +55,15 @@ module RailsPerformance
         end
       end
 
+      # Handle JSON serialization for custom_data and backtrace
+      before_save :serialize_json_fields
+
       private
+
+      def serialize_json_fields
+        self.custom_data = custom_data.to_json if custom_data.is_a?(Hash) || custom_data.is_a?(Array)
+        self.backtrace = backtrace.to_json if backtrace.is_a?(Array)
+      end
 
       def parsed_custom_data
         @parsed_custom_data ||= begin
