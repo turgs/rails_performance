@@ -9,22 +9,9 @@ module RailsPerformance
     isolate_namespace RailsPerformance
 
     # Run migrations for the performance tracking tables
-    initializer "rails_performance.create_database" do
-      ActiveSupport.on_load(:active_record) do
-        begin
-          # Try to run pending migrations for rails_performance
-          migration_context = ActiveRecord::MigrationContext.new(
-            File.join(RailsPerformance::Engine.root, "db", "migrate"),
-            ActiveRecord::SchemaMigration
-          )
-          
-          if migration_context.needs_migration?
-            migration_context.migrate
-          end
-        rescue => e
-          Rails.logger.warn "RailsPerformance: Could not run database migrations: #{e.message}"
-        end
-      end
+    initializer "rails_performance.create_database", after: :initialize_logger do
+      # Migrations are handled through normal Rails migration process
+      # This is just a placeholder for future database initialization if needed
     end
 
     # Run cleanup periodically to remove old records
@@ -49,7 +36,7 @@ module RailsPerformance
                 cutoff_time = RailsPerformance.recent_requests_time_window.ago
                 RailsPerformance::Models::TraceRecord.where('created_at < ?', cutoff_time).delete_all
               rescue => e
-                Rails.logger.warn "RailsPerformance cleanup error: #{e.message}"
+                Rails.logger.warn "RailsPerformance cleanup error: #{e.message}" if defined?(Rails.logger)
               end
             end
           end

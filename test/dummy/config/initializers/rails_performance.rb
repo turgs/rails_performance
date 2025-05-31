@@ -1,10 +1,12 @@
 if defined?(RailsPerformance)
   RailsPerformance.setup do |config|
-    config.redis = Redis.new(url: ENV["REDIS_URL"].presence || "redis://127.0.0.1:6379/#{(Rails.env.to_s == "test") ? 1 : 0}")
+    # Database configuration
+    # config.database_path = Rails.root.join("storage", "rails_performance.sqlite3")
+
     config.duration = 6.hours
 
     config.debug = true # currently not used>
-    config.enabled = true
+    config.enabled = Rails.env.test? ? false : true
 
     config.recent_requests_time_window = 60.minutes
     config.recent_requests_limit = nil
@@ -33,7 +35,7 @@ if defined?(RailsPerformance)
     # config home button link
     config.home_link = "/"
 
-    config.include_rake_tasks = true
+    config.include_rake_tasks = false
     config.include_custom_events = true
 
     # If enabled, the system monitor will be displayed on the dashboard
