@@ -1,47 +1,37 @@
 module RailsPerformance
   module Models
-    class ResourceRecord < BaseRecord
-      attr_accessor :server, :context, :role, :datetime, :datetimei, :json
+    class ResourceRecord < Base
+      self.table_name = 'rails_performance_resource_records'
 
-      def initialize(server:, context:, role:, datetime:, datetimei:, json:)
-        @server = server
-        @context = context
-        @role = role
-        @datetime = datetime
-        @datetimei = datetimei
-        @json = json
-      end
+      validates :server, :context, :role, :datetime, :datetimei, presence: true
 
-      def self.from_db(key, value)
-        items = key.split("|")
-
-        ResourceRecord.new(
-          server: items[2],
-          context: items[4],
-          role: items[6],
-          datetime: items[8],
-          datetimei: items[10],
-          json: value
-        )
-      end
+      scope :by_server, ->(server) { where(server: server) if server.present? }
+      scope :by_context, ->(context) { where(context: context) if context.present? }
+      scope :by_role, ->(role) { where(role: role) if role.present? }
+      scope :by_date, ->(date) { where("datetime LIKE ?", "#{date.strftime('%Y%m%d')}%") if date.present? }
 
       def record_hash
+        parsed_data = parsed_json_data
         {
           server: server,
           role: role,
           context: context,
           datetime: datetime,
           datetimei: RailsPerformance::Utils.from_datetimei(datetimei.to_i),
-          cpu: value["cpu"],
-          memory: value["memory"],
-          disk: value["disk"]
+          cpu: parsed_data["cpu"],
+          memory: parsed_data["memory"],
+          disk: parsed_data["disk"]
         }
       end
 
-      def save
-        key = "resource|server|#{server}|context|#{context}|role|#{role}|datetime|#{datetime}|datetimei|#{datetimei}|END|#{RailsPerformance::SCHEMA}"
-        # with longer expiration time
-        Utils.save_to_redis(key, json, RailsPerformance.system_monitor_duration.to_i)
+      private
+
+      def parsed_json_data
+        @parsed_json_data ||= begin
+          JSON.parse(data.to_s)
+        rescue
+          {}
+        end
       end
     end
   end

@@ -92,8 +92,16 @@ def dummy_delayed_job_record(datetimei: RailsPerformance::Utils.time.to_i, statu
   )
 end
 
-def reset_redis
-  RailsPerformance.redis.flushdb
+def reset_db
+  # Clear the performance tracking database tables
+  RailsPerformance::Models::RequestRecord.delete_all
+  RailsPerformance::Models::SidekiqRecord.delete_all
+  RailsPerformance::Models::GrapeRecord.delete_all
+  RailsPerformance::Models::RakeRecord.delete_all
+  RailsPerformance::Models::DelayedJobRecord.delete_all
+  RailsPerformance::Models::CustomRecord.delete_all
+  RailsPerformance::Models::ResourceRecord.delete_all
+  RailsPerformance::Models::TraceRecord.delete_all
 end
 
 # TODO improve

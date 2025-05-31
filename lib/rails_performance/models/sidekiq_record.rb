@@ -1,46 +1,15 @@
 module RailsPerformance
   module Models
-    class SidekiqRecord < BaseRecord
-      attr_accessor :queue, :worker, :jid, :datetimei, :enqueued_ati, :datetime, :start_timei, :status, :duration, :message
+    class SidekiqRecord < Base
+      self.table_name = 'rails_performance_sidekiq_records'
 
-      # key = job-performance
-      # |queue|default
-      # |worker|SimpleWorker
-      # |jid|7d48fbf20976c224510dbc60
-      # |datetime|20200124T0523
-      # |datetimei|1583146613
-      # |enqueued_ati|1583146613
-      # |start_timei|1583146614
-      # |status|success|END|1.0.0
-      # value = JSON
-      def self.from_db(key, value)
-        items = key.split("|")
+      validates :queue, :worker, :jid, :datetime, :datetimei, presence: true
+      validates :jid, uniqueness: true
 
-        SidekiqRecord.new(
-          queue: items[2],
-          worker: items[4],
-          jid: items[6],
-          datetime: items[8],
-          datetimei: items[10],
-          enqueued_ati: items[12],
-          start_timei: items[14],
-          status: items[16],
-          json: value
-        )
-      end
-
-      def initialize(queue:, worker:, jid:, datetime:, datetimei:, enqueued_ati:, start_timei:, status: nil, duration: nil, json: "{}")
-        @queue = queue
-        @worker = worker
-        @jid = jid
-        @datetime = datetime
-        @datetimei = datetimei.to_i
-        @enqueued_ati = enqueued_ati
-        @start_timei = start_timei
-        @status = status
-        @duration = duration
-        @json = json
-      end
+      scope :by_queue, ->(queue) { where(queue: queue) if queue.present? }
+      scope :by_worker, ->(worker) { where(worker: worker) if worker.present? }
+      scope :by_status, ->(status) { where(status: status) if status.present? }
+      scope :by_date, ->(date) { where("datetime LIKE ?", "#{date.strftime('%Y%m%d')}%") if date.present? }
 
       def record_hash
         {
@@ -50,15 +19,9 @@ module RailsPerformance
           status: status,
           datetimei: datetimei,
           datetime: RailsPerformance::Utils.from_datetimei(start_timei.to_i),
-          duration: value["duration"],
-          message: value["message"]
+          duration: duration,
+          message: message
         }
-      end
-
-      def save
-        key = "sidekiq|queue|#{queue}|worker|#{worker}|jid|#{jid}|datetime|#{datetime}|datetimei|#{datetimei}|enqueued_ati|#{enqueued_ati}|start_timei|#{start_timei}|status|#{status}|END|#{RailsPerformance::SCHEMA}"
-        value = {message: message, duration: duration}
-        Utils.save_to_redis(key, value)
       end
     end
   end
