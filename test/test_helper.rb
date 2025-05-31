@@ -107,22 +107,27 @@ end
 # TODO improve
 
 def setup_db(event = dummy_event)
+  reset_db
   event.save
 end
 
 def setup_sidekiq_db(event = dummy_sidekiq_event)
+  reset_db
   event.save
 end
 
 def setup_rake_db(event = dummy_rake_record)
+  reset_db
   event.save
 end
 
 def setup_delayed_job_db(event = dummy_delayed_job_record)
+  reset_db
   event.save
 end
 
 def setup_grape_db(event = dummy_grape_record)
+  reset_db
   event.save
 end
 
