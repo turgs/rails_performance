@@ -1,6 +1,7 @@
 if defined?(RailsPerformance)
   RailsPerformance.setup do |config|
-    # Database configuration
+    # Database configuration - uses separate SQLite database
+    # Default: Rails.root.join("storage", "rails_performance.sqlite3")
     # config.database_path = Rails.root.join("storage", "rails_performance.sqlite3")
 
     # All data we collect

@@ -1,6 +1,7 @@
 require "browser"
 require "active_support/core_ext/integer"
 require_relative "rails_performance/version"
+require_relative "rails_performance/database"
 require_relative "rails_performance/rails/query_builder"
 require_relative "rails_performance/rails/middleware"
 require_relative "rails_performance/models/base"

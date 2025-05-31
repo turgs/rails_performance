@@ -8,10 +8,19 @@ module RailsPerformance
   class Engine < ::Rails::Engine
     isolate_namespace RailsPerformance
 
-    # Run migrations for the performance tracking tables
-    initializer "rails_performance.create_database", after: :initialize_logger do
-      # Migrations are handled through normal Rails migration process
-      # This is just a placeholder for future database initialization if needed
+    # Setup separate database and run migrations
+    initializer "rails_performance.setup_database", after: :initialize_logger do
+      ActiveSupport.on_load(:active_record) do
+        begin
+          # Establish connection to separate database
+          RailsPerformance::Database.establish_connection
+          
+          # Run migrations for the performance tracking tables
+          RailsPerformance::Database.run_migrations
+        rescue => e
+          Rails.logger.warn "RailsPerformance database setup failed: #{e.message}" if defined?(Rails.logger)
+        end
+      end
     end
 
     # Run cleanup periodically to remove old records
