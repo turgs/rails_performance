@@ -8,6 +8,51 @@ module RailsPerformance
   class Engine < ::Rails::Engine
     isolate_namespace RailsPerformance
 
+    # Setup separate database and run migrations
+    initializer "rails_performance.setup_database", after: :initialize_logger do
+      ActiveSupport.on_load(:active_record) do
+        begin
+          # Establish connection to separate database
+          RailsPerformance::Database.establish_connection
+          
+          # Run migrations for the performance tracking tables
+          RailsPerformance::Database.run_migrations
+        rescue => e
+          Rails.logger.warn "RailsPerformance database setup failed: #{e.message}" if defined?(Rails.logger)
+        end
+      end
+    end
+
+    # Run cleanup periodically to remove old records
+    initializer "rails_performance.cleanup" do
+      ActiveSupport.on_load(:active_record) do
+        # Schedule cleanup to run periodically
+        if defined?(Rails::Server)
+          Thread.new do
+            loop do
+              sleep(3600) # Run every hour
+              begin
+                RailsPerformance::Models::RequestRecord.cleanup_old_records
+                RailsPerformance::Models::SidekiqRecord.cleanup_old_records
+                RailsPerformance::Models::GrapeRecord.cleanup_old_records
+                RailsPerformance::Models::RakeRecord.cleanup_old_records
+                RailsPerformance::Models::DelayedJobRecord.cleanup_old_records
+                RailsPerformance::Models::CustomRecord.cleanup_old_records
+                # Resource records use a different duration
+                cutoff_time = RailsPerformance.system_monitor_duration.ago
+                RailsPerformance::Models::ResourceRecord.where('created_at < ?', cutoff_time).delete_all
+                # Trace records use recent_requests_time_window
+                cutoff_time = RailsPerformance.recent_requests_time_window.ago
+                RailsPerformance::Models::TraceRecord.where('created_at < ?', cutoff_time).delete_all
+              rescue => e
+                Rails.logger.warn "RailsPerformance cleanup error: #{e.message}" if defined?(Rails.logger)
+              end
+            end
+          end
+        end
+      end
+    end
+
     initializer "rails_performance.resource_monitor" do
       # check required gems are available
       RailsPerformance._resource_monitor_enabled = !!(defined?(Sys::Filesystem) && defined?(Sys::CPU) && defined?(GetProcessMem))

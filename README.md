@@ -41,7 +41,7 @@ It allows you to track:
 - Custom events wrapped with `RailsPerformance.measure do .. end` block
 - works with Rails 4.2+ (and probably 4.1, 4.0 too) and Ruby 2.2+
 
-All data are stored in `local` Redis and not sent to any 3rd party servers.
+All data are stored in `local SQLite database` and not sent to any 3rd party servers.
 
 ## Production
 
@@ -65,7 +65,10 @@ Create `config/initializers/rails_performance.rb` in your app:
 
 ```ruby
 RailsPerformance.setup do |config|
-  config.redis    = Redis.new(url: ENV["REDIS_URL"].presence || "redis://127.0.0.1:6379/0") # or Redis::Namespace.new("rails-performance", redis: Redis.new), see below in README
+  # Database configuration - uses separate SQLite database
+  # Default: Rails.root.join("storage", "rails_performance.sqlite3")
+  # config.database_path = Rails.root.join("storage", "custom_performance.sqlite3")
+
   config.duration = 4.hours
 
   config.debug    = false # currently not used>
@@ -164,7 +167,12 @@ $ rails generate rails_performance:install
 
 Have a look at `config/initializers/rails_performance.rb` and adjust the configuration to your needs.
 
-You must also have installed Redis server, because this gem is storing data into it.
+The gem automatically:
+- Creates its own SQLite database at `storage/rails_performance.sqlite3` (or custom path if configured)
+- Runs all necessary migrations on Rails startup
+- Isolates performance data from your main application database
+
+No additional migration commands are needed! The gem handles all database setup automatically.
 
 After installation and configuration, start your Rails application, make a few requests, and open `https://localhost:3000/rails/performance` URL.
 
@@ -244,20 +252,6 @@ RailsPerformance.measure("some label", "some namespace") do
 end
 ```
 
-## Using with Redis Namespace
-
-If you want to use Redis namespace (for example when you have multiple apps running on the same server), you can configure it like this:
-
-```ruby
-  config.redis = Redis::Namespace.new("#{Rails.env}-rails-performance", redis: Redis.new(url: ENV["REDIS_URL"].presence || "redis://127.0.0.1:6379/0"))
-```
-
-and add a gem dependency to the Gemfile:
-
-```ruby
-gem 'redis-namespace'
-```
-
 ## How it works
 
 ![Schema](docs/rails_performance.png)
@@ -271,11 +265,13 @@ In addition it's wrapping gems internal methods and collecting performance infor
 - it can't compare historical data
 - depending on your load you may need to reduce time of for how long you store data, because all calculations are done in memory and it could take some time for high-load apps
 
-## Redis
+## Database Storage
 
-Gem is using Redis. This is the only one dependency.
+The gem uses its own separate SQLite database to store performance data, isolating it from your main application database. No external dependencies required.
 
-All information is stored into Redis. The default expiration time is set to `config.duration` from the configuration.
+The database is automatically created at `storage/rails_performance.sqlite3` (or a custom path if configured) and all migrations are handled automatically on Rails startup.
+
+All information is stored in the database with automatic cleanup. The default retention time is set to `config.duration` from the configuration.
 
 ## Development & Testing
 
@@ -286,7 +282,21 @@ After this:
 - rails s
 - rake test
 
-If you need quickly clear Redis data, you can use `rails runner 'RailsPerformance.redis.flushdb'`.
+If you need to quickly clear performance data, you can run the database cleanup manually:
+```ruby
+RailsPerformance::Models::RequestRecord.delete_all
+# Or use the cleanup method for all tables:
+[
+  RailsPerformance::Models::RequestRecord,
+  RailsPerformance::Models::SidekiqRecord,
+  RailsPerformance::Models::GrapeRecord,
+  RailsPerformance::Models::RakeRecord,
+  RailsPerformance::Models::DelayedJobRecord,
+  RailsPerformance::Models::CustomRecord,
+  RailsPerformance::Models::ResourceRecord,
+  RailsPerformance::Models::TraceRecord
+].each(&:delete_all)
+```
 
 Like a regular web development.
 

@@ -4,7 +4,6 @@ PATH
     rails_performance (1.4.2)
       browser
       railties
-      redis
 
 GEM
   remote: https://rubygems.org/
@@ -233,8 +232,6 @@ GEM
     rake (13.2.1)
     rdoc (6.8.1)
       psych (>= 4.0.0)
-    redis (5.3.0)
-      redis-client (>= 0.22.0)
     redis-client (0.22.2)
       connection_pool
     regexp_parser (2.9.2)

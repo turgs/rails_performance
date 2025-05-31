@@ -1,10 +1,10 @@
-require "redis"
 require "browser"
 require "active_support/core_ext/integer"
 require_relative "rails_performance/version"
+require_relative "rails_performance/database"
 require_relative "rails_performance/rails/query_builder"
 require_relative "rails_performance/rails/middleware"
-require_relative "rails_performance/models/base_record"
+require_relative "rails_performance/models/base"
 require_relative "rails_performance/models/request_record"
 require_relative "rails_performance/models/sidekiq_record"
 require_relative "rails_performance/models/delayed_job_record"
@@ -32,8 +32,8 @@ require_relative "rails_performance/thread/current_request"
 module RailsPerformance
   FORMAT = "%Y%m%dT%H%M"
 
-  mattr_accessor :redis
-  @@redis = Redis.new
+  mattr_accessor :database_path
+  @@database_path = nil
 
   mattr_accessor :duration
   @@duration = 4.hours

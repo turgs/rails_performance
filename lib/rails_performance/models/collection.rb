@@ -25,7 +25,17 @@ module RailsPerformance
         groupped_collection.each do |key, records|
           result[key] ||= []
           records.each do |record|
-            result[key] << record.value
+            # Convert ActiveRecord record to hash for compatibility
+            record_data = {
+              "duration" => record.duration,
+              "view_runtime" => record.respond_to?(:view_runtime) ? record.view_runtime : nil,
+              "db_runtime" => record.respond_to?(:db_runtime) ? record.db_runtime : nil
+            }
+            # Add any other attributes specific to the record type
+            if record.respond_to?(:message)
+              record_data["message"] = record.message
+            end
+            result[key] << record_data
           end
         end
         result

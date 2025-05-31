@@ -1,60 +1,26 @@
 module RailsPerformance
   module Models
-    class DelayedJobRecord < BaseRecord
-      attr_accessor :jid, :duration, :datetime, :datetimei, :source_type, :class_name, :method_name, :status, :json
+    class DelayedJobRecord < Base
+      self.table_name = 'rails_performance_delayed_job_records'
 
-      # delayed_job
-      # |jid|22
-      # |datetime|20210415T0616
-      # |datetimei|1618492591
-      # |source_type|instance_method
-      # |class_name|User
-      # |method_name|say_hello_without_delay
-      # |status|success|END|1.0.0
-      def self.from_db(key, value)
-        items = key.split("|")
+      validates :jid, :datetime, :datetimei, presence: true
+      validates :jid, uniqueness: true
 
-        DelayedJobRecord.new(
-          jid: items[2],
-          datetime: items[4],
-          datetimei: items[6],
-          source_type: items[8],
-          class_name: items[10],
-          method_name: items[12],
-          status: items[14],
-          json: value
-        )
-      end
-
-      def initialize(jid:, datetime:, datetimei:, source_type:, class_name:, method_name:, status:, duration: nil, json: "{}")
-        @jid = jid
-        @duration = duration
-        @datetime = datetime
-        @datetimei = datetimei.to_i
-        @source_type = source_type
-        @class_name = class_name
-        @method_name = method_name
-        @status = status
-        @json = json
-      end
+      scope :by_status, ->(status) { where(status: status) if status.present? }
+      scope :by_class_name, ->(class_name) { where(class_name: class_name) if class_name.present? }
+      scope :by_date, ->(date) { where("datetime LIKE ?", "#{date.strftime('%Y%m%d')}%") if date.present? }
 
       def record_hash
         {
           jid: jid,
           datetime: RailsPerformance::Utils.from_datetimei(datetimei),
           datetimei: datetimei,
-          duration: value["duration"],
+          duration: duration,
           status: status,
           source_type: source_type,
           class_name: class_name,
           method_name: method_name
         }
-      end
-
-      def save
-        key = "delayed_job|jid|#{jid}|datetime|#{datetime}|datetimei|#{datetimei}|source_type|#{source_type}|class_name|#{class_name}|method_name|#{method_name}|status|#{status}|END|#{RailsPerformance::SCHEMA}"
-        value = {duration: duration}
-        Utils.save_to_redis(key, value)
       end
     end
   end

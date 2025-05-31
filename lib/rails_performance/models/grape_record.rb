@@ -1,59 +1,30 @@
 module RailsPerformance
   module Models
-    class GrapeRecord < BaseRecord
-      attr_accessor :datetime, :datetimei, :format, :status, :path, :method, :request_id, :json
-      attr_accessor :endpoint_render_grape, :endpoint_run_grape, :format_response_grape
+    class GrapeRecord < Base
+      self.table_name = 'rails_performance_grape_records'
 
-      # key = grape|datetime|20210409T1115|datetimei|1617992134|format|json|path|/api/users|status|200|method|GET|request_id|1122|END|1.0.0
-      # value = {"endpoint_render.grape"=>0.000643989, "endpoint_run.grape"=>0.002000907, "format_response.grape"=>0.0348967}
-      def self.from_db(key, value)
-        items = key.split("|")
+      validates :request_id, :datetime, :datetimei, presence: true
+      validates :request_id, uniqueness: true
 
-        GrapeRecord.new(
-          datetime: items[2],
-          datetimei: items[4],
-          format: items[6],
-          path: items[8],
-          status: items[10],
-          method: items[12],
-          request_id: items[14],
-          json: value
-        )
-      end
-
-      def initialize(request_id:, datetime: nil, datetimei: nil, format: nil, path: nil, status: nil, method: nil, endpoint_render_grape: nil, endpoint_run_grape: nil, format_response_grape: nil, json: "{}")
-        @datetime = datetime
-        @datetimei = datetimei.to_i unless datetimei.nil?
-        @format = format
-        @path = path
-        @status = status
-        @method = method
-        @request_id = request_id
-
-        @endpoint_render_grape = endpoint_render_grape
-        @endpoint_run_grape = endpoint_run_grape
-        @format_response_grape = format_response_grape
-
-        @json = json
-      end
+      scope :by_status, ->(status) { where(status: status) if status.present? }
+      scope :by_format, ->(format) { where(format: format) if format.present? }
+      scope :by_method, ->(method) { where(method: method) if method.present? }
+      scope :by_path, ->(path) { where(path: path) if path.present? }
+      scope :by_date, ->(date) { where("datetime LIKE ?", "#{date.strftime('%Y%m%d')}%") if date.present? }
 
       def record_hash
         {
-          format: self.format,
+          format: format,
           status: status,
           method: method,
           path: path,
           datetime: RailsPerformance::Utils.from_datetimei(datetimei.to_i),
           datetimei: datetimei.to_i,
-          request_id: request_id
-        }.merge(value)
-      end
-
-      def save
-        key = "grape|datetime|#{datetime}|datetimei|#{datetimei}|format|#{format}|path|#{path}|status|#{status}|method|#{method}|request_id|#{request_id}|END|#{RailsPerformance::SCHEMA}"
-        value = {"endpoint_render.grape" => endpoint_render_grape, "endpoint_run.grape" => endpoint_run_grape, "format_response.grape" => format_response_grape}
-
-        Utils.save_to_redis(key, value)
+          request_id: request_id,
+          "endpoint_render.grape" => endpoint_render_grape,
+          "endpoint_run.grape" => endpoint_run_grape,
+          "format_response.grape" => format_response_grape
+        }
       end
     end
   end

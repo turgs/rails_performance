@@ -1,36 +1,16 @@
 module RailsPerformance
   module Models
-    class RakeRecord < BaseRecord
-      attr_accessor :task, :duration, :datetime, :datetimei, :status
+    class RakeRecord < Base
+      self.table_name = 'rails_performance_rake_records'
 
-      # rake|task|["task3"]|datetime|20210416T1254|datetimei|1618602843|status|error|END|1.0.0
-      # {"duration":0.00012442}
-      def self.from_db(key, value)
-        items = key.split("|")
+      validates :task, :datetime, :datetimei, presence: true
 
-        RakeRecord.new(
-          task: JSON.parse(items[2]),
-          datetime: items[4],
-          datetimei: items[6],
-          status: items[8],
-          json: value
-        )
-      end
-
-      def initialize(task:, datetime:, datetimei:, status:, duration: nil, json: "{}")
-        @task = Array.wrap(task)
-        @datetime = datetime
-        @datetimei = datetimei.to_i
-        @status = status
-        @duration = duration
-        @json = json
-
-        @duration ||= value["duration"]
-      end
+      scope :by_status, ->(status) { where(status: status) if status.present? }
+      scope :by_date, ->(date) { where("datetime LIKE ?", "#{date.strftime('%Y%m%d')}%") if date.present? }
 
       def record_hash
         {
-          task: task,
+          task: parsed_task,
           datetime: RailsPerformance::Utils.from_datetimei(datetimei),
           datetimei: datetimei,
           duration: duration,
@@ -38,10 +18,21 @@ module RailsPerformance
         }
       end
 
-      def save
-        key = "rake|task|#{task.to_json}|datetime|#{datetime}|datetimei|#{datetimei}|status|#{status}|END|#{RailsPerformance::SCHEMA}"
-        value = {duration: duration}
-        Utils.save_to_redis(key, value)
+      # Handle JSON serialization for task field
+      before_save :serialize_task_field
+
+      private
+
+      def serialize_task_field
+        self.task = task.to_json if task.is_a?(Array) || task.is_a?(Hash)
+      end
+
+      def parsed_task
+        @parsed_task ||= begin
+          JSON.parse(task.to_s)
+        rescue
+          task
+        end
       end
     end
   end

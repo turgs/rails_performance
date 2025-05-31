@@ -8,7 +8,7 @@ module RailsPerformance
       Time.at(datetimei, in: "+00:00")
     end
 
-    # date key in redis store
+    # date key for storage
     def self.cache_key(now = Date.today)
       "date-#{now}"
     end
@@ -19,25 +19,18 @@ module RailsPerformance
       now.strftime("%H:%M")
     end
 
+    # These methods are kept for compatibility but no longer use Redis
     def self.fetch_from_redis(query)
-      RailsPerformance.log "\n\n   [REDIS QUERY]   -->   #{query}\n\n"
-
-      keys = RailsPerformance.redis.keys(query)
-      return [] if keys.blank?
-      values = RailsPerformance.redis.mget(keys)
-
-      RailsPerformance.log "\n\n   [FOUND]   -->   #{values.size}\n\n"
-
-      [keys, values]
+      RailsPerformance.log "\n\n   [DATABASE QUERY]   -->   #{query}\n\n"
+      # This method is no longer used with SQLite backend
+      [[], []]
     end
 
     def self.save_to_redis(key, value, expire = RailsPerformance.duration.to_i)
-      # TODO think here if add return
-      # return if value.empty?
-
       RailsPerformance.log "  [SAVE]    key  --->  #{key}\n"
       RailsPerformance.log "  [SAVE]    value  --->  #{value.to_json}\n\n"
-      RailsPerformance.redis.set(key, value.to_json, ex: expire.to_i)
+      # This method is no longer used with SQLite backend
+      true
     end
 
     def self.days(duration = RailsPerformance.duration)

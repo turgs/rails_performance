@@ -41,94 +41,58 @@ module RailsPerformance
     end
 
     def store
-      keys, values = Utils.fetch_from_redis(query)
-
-      return [] if keys.blank?
-
-      keys.each_with_index do |key, index|
-        yield klass.from_db(key, values[index])
+      query_scope.find_each do |record|
+        yield record
       end
     end
 
     private
 
-    def query
+    def query_scope
+      scope = klass.all
+
       case type
       when :requests
-        "performance|*#{compile_requests_query}*|END|#{RailsPerformance::SCHEMA}"
+        scope = scope.by_controller(q[:controller])
+                    .by_action(q[:action])
+                    .by_format(q[:format])
+                    .by_status(q[:status])
+                    .by_method(q[:method])
+                    .by_path(q[:path])
+                    .by_date(q[:on])
       when :resources
-        "resource|*#{compile_resource_query}*|END|#{RailsPerformance::SCHEMA}"
+        scope = scope.by_server(q[:server])
+                    .by_context(q[:context])
+                    .by_role(q[:role])
+                    .by_date(q[:on])
       when :sidekiq
-        "sidekiq|*#{compile_sidekiq_query}*|END|#{RailsPerformance::SCHEMA}"
+        scope = scope.by_queue(q[:queue])
+                    .by_worker(q[:worker])
+                    .by_status(q[:status])
+                    .by_date(q[:on])
       when :delayed_job
-        "delayed_job|*#{compile_delayed_job_query}*|END|#{RailsPerformance::SCHEMA}"
+        scope = scope.by_status(q[:status])
+                    .by_class_name(q[:class_name])
+                    .by_date(q[:on])
       when :grape
-        "grape|*#{compile_grape_query}*|END|#{RailsPerformance::SCHEMA}"
+        scope = scope.by_status(q[:status])
+                    .by_format(q[:format])
+                    .by_method(q[:method])
+                    .by_path(q[:path])
+                    .by_date(q[:on])
       when :rake
-        "rake|*#{compile_rake_query}*|END|#{RailsPerformance::SCHEMA}"
+        scope = scope.by_status(q[:status])
+                    .by_date(q[:on])
       when :custom
-        "custom|*#{compile_custom_query}*|END|#{RailsPerformance::SCHEMA}"
+        scope = scope.by_tag_name(q[:tag_name])
+                    .by_namespace_name(q[:namespace_name])
+                    .by_status(q[:status])
+                    .by_date(q[:on])
       else
         raise "wrong type: \"#{type}\" for datasource query builder"
       end
-    end
 
-    def compile_requests_query
-      str = []
-      str << "controller|#{q[:controller]}|" if q[:controller].present?
-      str << "action|#{q[:action]}|" if q[:action].present?
-      str << "format|#{q[:format]}|" if q[:format].present?
-      str << "status|#{q[:status]}|" if q[:status].present?
-      str << "datetime|#{q[:on].strftime("%Y%m%d")}*|" if q[:on].present?
-      str << "method|#{q[:method]}|" if q[:method].present?
-      str << "path|#{q[:path]}|" if q[:path].present?
-      str.join("*")
-    end
-
-    def compile_sidekiq_query
-      str = []
-      str << "queue|#{q[:queue]}|" if q[:queue].present?
-      str << "worker|#{q[:worker]}|" if q[:worker].present?
-      str << "datetime|#{q[:on].strftime("%Y%m%d")}*|" if q[:on].present?
-      str << "status|#{q[:status]}|" if q[:status].present?
-      str.join("*")
-    end
-
-    def compile_resource_query
-      str = []
-      str << "server|#{q[:server]}|" if q[:server].present?
-      str << "context|#{q[:context]}|" if q[:context].present?
-      str << "role|#{q[:role]}|" if q[:role].present?
-      str << "datetime|#{q[:on].strftime("%Y%m%d")}*|" if q[:on].present?
-      str.join("*")
-    end
-
-    def compile_delayed_job_query
-      str = []
-      str << "datetime|#{q[:on].strftime("%Y%m%d")}*|" if q[:on].present?
-      str << "status|#{q[:status]}|" if q[:status].present?
-      str.join("*")
-    end
-
-    def compile_rake_query
-      str = []
-      str << "datetime|#{q[:on].strftime("%Y%m%d")}*|" if q[:on].present?
-      str << "status|#{q[:status]}|" if q[:status].present?
-      str.join("*")
-    end
-
-    def compile_custom_query
-      str = []
-      str << "datetime|#{q[:on].strftime("%Y%m%d")}*|" if q[:on].present?
-      str << "status|#{q[:status]}|" if q[:status].present?
-      str.join("*")
-    end
-
-    def compile_grape_query
-      str = []
-      str << "datetime|#{q[:on].strftime("%Y%m%d")}*|" if q[:on].present?
-      str << "status|#{q[:status]}|" if q[:status].present?
-      str.join("*")
+      scope
     end
   end
 end

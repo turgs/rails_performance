@@ -1,7 +1,8 @@
 if defined?(RailsPerformance)
   RailsPerformance.setup do |config|
-    # Redis configuration
-    config.redis = Redis.new(url: ENV["REDIS_URL"].presence || "redis://127.0.0.1:6379/0")
+    # Database configuration - uses separate SQLite database
+    # Default: Rails.root.join("storage", "rails_performance.sqlite3")
+    # config.database_path = Rails.root.join("storage", "rails_performance.sqlite3")
 
     # All data we collect
     config.duration = 4.hours

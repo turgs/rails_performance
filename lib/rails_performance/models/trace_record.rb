@@ -1,17 +1,21 @@
 module RailsPerformance
   module Models
-    class TraceRecord < BaseRecord
-      attr_accessor :request_id, :value
+    class TraceRecord < Base
+      self.table_name = 'rails_performance_trace_records'
 
-      def initialize(request_id:, value:)
-        @request_id = request_id
-        @value = value
+      validates :request_id, presence: true
+      validates :request_id, uniqueness: true
+
+      def save!(**args)
+        return false if data.blank?
+        self.data = data.to_json if data.is_a?(Array) || data.is_a?(Hash)
+        super
       end
 
-      def save
-        return if value.empty?
-
-        Utils.save_to_redis("trace|#{request_id}|END|#{RailsPerformance::SCHEMA}", value, RailsPerformance.recent_requests_time_window.to_i)
+      def save(**args) 
+        return false if data.blank?
+        self.data = data.to_json if data.is_a?(Array) || data.is_a?(Hash)
+        super
       end
     end
   end
